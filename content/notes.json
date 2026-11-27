@@ -1,0 +1,145 @@
+[
+  {
+    "id": "optimal-transport",
+    "title": "Optimal transport",
+    "category": "Mathematical structures",
+    "description": "Classical and quantum transport, couplings, convex duality, and semidefinite programming.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/optimal-transport.md"
+  },
+  {
+    "id": "kd-distribution",
+    "title": "KD distribution",
+    "category": "Quantum information",
+    "description": "Kirkwood–Dirac quasiprobabilities, operator representations, and temporal correlations.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/kd-distribution.md"
+  },
+  {
+    "id": "supersymmetry",
+    "title": "Supersymmetry",
+    "category": "Field theory & gravity",
+    "description": "Supersymmetry algebras, representations, and supersymmetric field theories.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/supersymmetry.md"
+  },
+  {
+    "id": "von-neumann-algebra",
+    "title": "von Neumann algebra",
+    "category": "Mathematical structures",
+    "description": "Operator algebras, states, representations, and modular theory.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/von-neumann-algebra.md"
+  },
+  {
+    "id": "algebraic-quantum-field-theory",
+    "title": "Algebraic quantum field theory",
+    "category": "Field theory & gravity",
+    "description": "Local observable algebras, locality, superselection sectors, and the algebraic approach to QFT.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/algebraic-quantum-field-theory.md"
+  },
+  {
+    "id": "holography",
+    "title": "Holography",
+    "category": "Field theory & gravity",
+    "description": "AdS/CFT, holographic entanglement, and the relation between geometry and quantum information.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/holography.md"
+  },
+  {
+    "id": "lefschetz-thimble",
+    "title": "Lefschetz-thimble problem",
+    "category": "Mathematical structures",
+    "description": "Complex saddles, steepest-descent contours, and Picard–Lefschetz theory.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/lefschetz-thimble.md"
+  },
+  {
+    "id": "lie-algebra",
+    "title": "Lie algebra",
+    "category": "Mathematical structures",
+    "description": "Lie groups and algebras, representations, and symmetry in physics.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/lie-algebra.md"
+  },
+  {
+    "id": "fuzzy-sphere",
+    "title": "Fuzzy sphere",
+    "category": "Mathematical structures",
+    "description": "Matrix approximations to geometry and field theories on noncommutative spaces.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/fuzzy-sphere.md"
+  },
+  {
+    "id": "conformal-bootstrap",
+    "title": "Conformal bootstrap",
+    "category": "Field theory & gravity",
+    "description": "Conformal symmetry, crossing equations, and constraints on conformal field theories.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/conformal-bootstrap.md"
+  },
+  {
+    "id": "quantum-field-theory",
+    "title": "Quantum field theory",
+    "category": "Field theory & gravity",
+    "description": "Quantum fields, correlation functions, renormalization, and effective descriptions.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/quantum-field-theory.md"
+  },
+  {
+    "id": "temporal-entanglement",
+    "title": "Temporal entanglement",
+    "category": "Quantum information",
+    "description": "Spacetime states, temporal correlations, and extensions of entanglement beyond spatial subsystems.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/temporal-entanglement.md"
+  },
+  {
+    "id": "generalized-symmetry",
+    "title": "Generalized symmetry",
+    "category": "Field theory & gravity",
+    "description": "Higher-form and non-invertible symmetries, topological defects, and symmetry TFTs.",
+    "pdfUrl": "",
+    "externalUrl": "",
+    "status": "coming-soon",
+    "updatedAt": "",
+    "bodyFile": "notes/generalized-symmetry.md"
+  }
+]

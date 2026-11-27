@@ -1,0 +1,32 @@
+[
+  {
+    "id": "quantum-information",
+    "title": "Quantum information across space & time",
+    "description": "Entanglement, temporal states, Kirkwood–Dirac quasiprobabilities, and quantum optimal transport.",
+    "tags": [
+      "Temporal entanglement",
+      "KD distribution",
+      "Quantum transport"
+    ]
+  },
+  {
+    "id": "holography",
+    "title": "Holography & quantum field theory",
+    "description": "Holographic entanglement, complex extremal surfaces, and the geometry of quantum field theory.",
+    "tags": [
+      "AdS/CFT",
+      "Entanglement",
+      "Complex saddles"
+    ]
+  },
+  {
+    "id": "symmetry",
+    "title": "Symmetry & operator algebras",
+    "description": "Generalized symmetries, symmetry TFTs, algebraic quantum field theory, and operator-algebraic methods.",
+    "tags": [
+      "SymTFT",
+      "AQFT",
+      "von Neumann algebras"
+    ]
+  }
+]

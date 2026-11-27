@@ -45,14 +45,14 @@ function updateTopic() {
   const current = $('current-note'); current.replaceChildren();
   if (validWebNote(topic)) {
     current.append(node('p', 'Published on your homepage.', 'success'), link(`Read ${topic.title}`, topic.webUrl));
-  } else current.textContent = 'No converted web note has been published for this topic yet.';
+  } else current.textContent = `No converted web note has been published for ${topic.title} yet.`;
   const url = new URL(location.href); url.searchParams.set('topic', topic.id); history.replaceState(null, '', url);
   controls();
 }
 async function loadTopics(quiet = false) {
   if (loading) return;
   loading = true; $('load-error').hidden = true; $('retry').disabled = true; controls();
-  const previous = $('topic').value || new URL(location.href).searchParams.get('topic');
+  const previous = selectedTopic()?.id || new URL(location.href).searchParams.get('topic');
   try {
     const response = await fetch(`./content/notes.json?updated=${Date.now()}`, { cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(20000) });
     if (!response.ok) throw new Error('Topics unavailable');

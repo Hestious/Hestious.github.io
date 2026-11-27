@@ -8,6 +8,8 @@ let lastContentCheck = 0;
 let readController;
 let previousFocus;
 let noteSequence = 0;
+let photoSequence = 0;
+let photoRequest;
 const githubBase = 'https://github.com/Hestious/Hestious.github.io/edit/main/';
 
 function element(tag, className, text) {
@@ -36,6 +38,35 @@ export function safeUrl(value) {
     return parsed.origin === window.location.origin ? parsed.href : '';
   } catch { return ''; }
 }
+export function profilePhotoUrl(value) {
+  // Only the local, content-addressed files created by the owner photo control.
+  return typeof value==='string' && /^assets\/profile\/photo-[a-f0-9]{64}\.(?:png|jpg|webp)$/.test(value)
+    ? safeUrl(value) : '';
+}
+export function renderProfilePhoto(profile) {
+  const container=$('profile-visual');const image=$('profile-photo');const fallback=$('profile-photo-fallback');
+  if(!container||!image||!fallback)return;
+  const sequence=++photoSequence;const url=profilePhotoUrl(profile.photoUrl);
+  if(photoRequest){photoRequest.onload=null;photoRequest.onerror=null;photoRequest=null;}
+  const showFallback=(state)=>{image.hidden=true;image.removeAttribute('src');fallback.hidden=false;container.dataset.photoState=state;};
+  container.classList.toggle('rh-photo-enabled',!!url);
+  if(!url){image.alt='';showFallback('empty');return;}
+  const name=typeof profile.name==='string'?profile.name.trim():'';
+  image.alt=typeof profile.photoAlt==='string'&&profile.photoAlt.trim()
+    ? profile.photoAlt.trim() : (name&&name!=='Research & notes'?`Portrait of ${name}`:'Profile photograph');
+  if(image.src===url&&image.complete&&image.naturalWidth>0){image.hidden=false;fallback.hidden=true;container.dataset.photoState='ready';return;}
+  container.dataset.photoState='loading';
+  const request=new Image();photoRequest=request;request.decoding='async';
+  request.onload=()=>{
+    if(sequence!==photoSequence)return;
+    image.src=url;image.hidden=false;fallback.hidden=true;container.dataset.photoState='ready';photoRequest=null;
+  };
+  request.onerror=()=>{
+    if(sequence!==photoSequence)return;
+    showFallback('error');photoRequest=null;
+  };
+  request.src=url;
+}
 function resourceLink(label, value, className = '') {
   const url = safeUrl(value); if (!url) return null;
   const node = element('a', className, label); node.href = url; node.target = '_blank'; node.rel = 'noopener noreferrer'; return node;
@@ -43,6 +74,7 @@ function resourceLink(label, value, className = '') {
 function badge(note) { return element('span', `rh-badge ${note.status === 'available' ? 'rh-badge-available' : ''}`,note.status === 'available' ? 'Available' : 'In preparation'); }
 function renderProfile() {
   const p=data.profile; const name=p.name || 'Research & notes';
+  renderProfilePhoto(p);
   $('brand-initial').textContent = name.trim().slice(0,1).toUpperCase(); $('brand-name').textContent=name; $('footer-name').textContent=name;
   document.querySelector('.rh-brand').setAttribute('aria-label',`${name} homepage`);
   $('profile-title').replaceChildren(document.createTextNode(name));

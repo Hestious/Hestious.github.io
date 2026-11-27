@@ -25,3 +25,15 @@
 .rh-reader-status{font-size:16px;color:#60767f;padding:22px 0}
 
 .rh-monogram>#brand-initial{color:var(--foreground)}
+
+/* Reserve one visual slot so a loaded portrait does not move the hero text. */
+.rh-profile-visual{display:grid;place-items:center;aspect-ratio:1;width:100%;max-width:25rem;justify-self:end}
+.rh-profile-visual>.rh-geometry,.rh-profile-photo{grid-area:1/1}
+.rh-profile-visual>.rh-geometry{width:100%}
+.rh-profile-photo{display:block;width:min(100%,20rem);height:auto;aspect-ratio:1;object-fit:cover;object-position:center;border:1px solid var(--rh-line);border-radius:8px;background:#edf3f2}
+@media(max-width:720px){
+  .rh-profile-visual{display:none;max-width:18rem;margin:28px auto 0;justify-self:center}
+  .rh-profile-visual.rh-photo-enabled{display:grid}
+  .rh-profile-visual.rh-photo-enabled>.rh-geometry{display:block;max-width:none;margin:0;padding-top:0}
+}
+@media print{.rh-profile-visual{display:none}}

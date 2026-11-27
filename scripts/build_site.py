@@ -700,6 +700,15 @@ def build(root: Path, output: Path) -> list[dict]:
                         archive.write(file, file.relative_to(fixture).as_posix())
             convert_project(sample, {"id": "latex-import-example", "title": "LaTeX import example", "description": "A demonstration of converted LaTeX text and mathematics; not a research manuscript.", "_asset_prefix": "../../"}, demo)
         (temporary / "import-report.json").write_text(json.dumps(reports, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        commit = os.environ.get("GITHUB_SHA", "")
+        if not commit:
+            try:
+                commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root,
+                                        capture_output=True, text=True, timeout=5).stdout.strip()
+            except (OSError, subprocess.TimeoutExpired):
+                commit = ""
+        deployment = {"commit": commit if re.fullmatch(r"[a-f0-9]{40}", commit) else None}
+        (temporary / "deployment.json").write_text(json.dumps(deployment) + "\n", encoding="utf-8")
         if output.exists():
             shutil.rmtree(output)
         temporary.rename(output)

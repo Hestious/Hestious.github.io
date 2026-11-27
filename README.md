@@ -4,11 +4,11 @@ Personal academic homepage for [Hestious](https://github.com/Hestious). The publ
 
 ## Edit the content
 
-Bookmark the [owner upload page](https://hestious.github.io/import.html). It lets you connect your GitHub account, choose a LaTeX ZIP, and publish it directly from the website. Editing controls are hidden during ordinary public browsing. For profile, publication, and Markdown edits, use the [editing guide](https://hestious.github.io/edit.html) or edit these files in GitHub and commit to `main`:
+Bookmark the [owner upload page](https://hestious.github.io/import.html). It lets you connect your GitHub account, publish a LaTeX ZIP, delete a topic’s PDF attachment, and change your profile photo directly from the website. Editing controls are hidden during ordinary public browsing. For profile, publication, and Markdown edits, use the [editing guide](https://hestious.github.io/edit.html) or edit these files in GitHub and commit to `main`:
 
 | Content | File |
 | --- | --- |
-| Name, affiliation, biography, email, profile links | `content/profile.json` |
+| Name, affiliation, biography, email, profile links, profile photo | `content/profile.json` |
 | Research interests | `content/interests.json` |
 | Publications and preprints | `content/publications.json` |
 | Lecture-note titles, categories, descriptions, PDF links, availability | `content/notes.json` |
@@ -48,6 +48,25 @@ Add later entries after a comma, inside the same outer square brackets. Use a un
 3. Set the note's `pdfUrl` in `content/notes.json`, for example `assets/pdfs/optimal-transport.pdf`.
 4. Set `status` to `available` when ready, and optionally set `updatedAt` to a date such as `2026-11-27`. Use `coming-soon` for a planned topic.
 5. To add a new topic, add a new object to `content/notes.json` and create its Markdown file. Keep `id` unique and `bodyFile` equal to the file path.
+
+### Delete a PDF from the website
+
+1. Connect publishing on the [owner page](https://hestious.github.io/import.html), then choose the lecture-note topic.
+2. Under **PDF attachment**, review **Open current PDF**, then select **Delete PDF**.
+3. Check the displayed topic and filename, and select **Confirm PDF deletion**. The file and its attachment link are removed together. Other notes in the topic remain available; a topic with no remaining content returns to **In preparation**.
+4. Wait for publication confirmation. The page verifies the deployed change and that the old PDF no longer exists on the public website.
+
+A PDF shared by another note or publication cannot be deleted here until its other references are resolved. Removing a PDF from the current homepage does not erase its earlier copies from Git history. Uploading a new PDF still uses the PDF folder workflow above.
+
+### Change your profile photo
+
+1. Connect publishing on the [owner page](https://hestious.github.io/import.html).
+2. In **Profile photo**, choose a JPG, PNG, or WebP file no larger than 5 MB. Review the preview and enter a short **Photo description** for screen readers.
+3. Select **Publish photo** and wait for publication confirmation. The homepage displays a square crop from the center of the photo.
+
+The browser prepares a copy for web display, strips embedded photo metadata, and limits its longest side to 2,048 pixels. It uploads the prepared image and updates `photoUrl` and `photoAlt` in `content/profile.json` together, preserving the rest of your profile. Each prepared image has its own content-based filename, so visitors receive the new version without an old image remaining in their browser cache.
+
+To restore the original geometric illustration, select **Remove photo** and then **Confirm photo removal**. Earlier photos remain in Git history. Changes to your GitHub avatar do not change your homepage photo.
 
 ### Publish a LaTeX ZIP from the website
 

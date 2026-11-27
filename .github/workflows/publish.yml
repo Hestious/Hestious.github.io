@@ -1,0 +1,58 @@
+name: Publish research homepage
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install document converter
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pandoc poppler-utils
+      - name: Install formula renderer
+        run: npm ci --ignore-scripts
+      - name: Check LaTeX import behavior
+        run: python3 -m unittest discover -s tests -v
+      - name: Convert lecture notes and build website
+        run: python3 scripts/build_site.py --output dist
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: latex-conversion-report
+          path: dist/import-report.json
+          if-no-files-found: ignore
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

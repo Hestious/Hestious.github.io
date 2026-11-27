@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Publish a LaTeX project as a readable lecture note with rendered equations.">
+  <title>Import LaTeX notes · Research & notes</title>
+  <link rel="icon" href="assets/favicon.svg">
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f8fbfb;color:#193d43;font:17px/1.7 system-ui,sans-serif}header,main,footer{max-width:1040px;margin:auto;padding:28px}header{display:flex;justify-content:space-between;gap:20px;border-bottom:1px solid #dce6e7}a{color:#155e65;text-underline-offset:4px}a:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid #55a9b1;outline-offset:4px}h1,h2{font-family:Georgia,serif;line-height:1.15;font-weight:normal}h1{font-size:clamp(36px,6vw,58px);max-width:750px;margin:38px 0 20px}h2{font-size:28px}p{max-width:760px}.eyebrow{font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:#54777a}.intro{font-size:20px}.panel{padding:30px;border:1px solid #cbdcdd;background:white;border-radius:12px;margin:34px 0}.panel h2{margin-top:0}.label{display:block;font-weight:600;margin-bottom:10px}select{width:100%;max-width:600px;font:inherit;color:#193d43;background:#f8fbfb;border:1px solid #9bb7ba;border-radius:6px;padding:12px 42px 12px 14px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath d='m5 7 5 5 5-5' fill='none' stroke='%23193d43' stroke-width='1.6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}.button{display:inline-block;background:#174e51;color:white;padding:11px 20px;border-radius:6px;text-decoration:none;font-weight:600}.button[aria-disabled="true"]{opacity:.55;pointer-events:none}.links{display:flex;flex-wrap:wrap;align-items:center;gap:16px 24px;margin-top:22px}.hint{color:#54777a;font-size:15px}.status{min-height:28px}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;list-style:none;padding:0;counter-reset:step}.steps li{padding:24px 0;border-top:1px solid #cadcdd}.steps strong{display:block;font-size:18px;margin-bottom:8px}.steps strong::before{counter-increment:step;content:counter(step) ". ";color:#54777a}.steps p{margin:0}code{background:#e8efef;padding:2px 6px;border-radius:3px;overflow-wrap:anywhere}.help{display:grid;grid-template-columns:1fr 1fr;gap:38px;border-top:1px solid #dce6e7;margin-top:40px;padding-top:12px}.help ul{padding-left:22px}.help li{margin:9px 0}.error{color:#9c2c27}button.retry{font:inherit;border:1px solid #9bb7ba;background:white;color:#155e65;padding:6px 14px;border-radius:5px;cursor:pointer}footer{border-top:1px solid #dce6e7;color:#54777a;margin-top:45px;font-size:15px}[hidden]{display:none!important}@media(max-width:700px){.steps,.help{grid-template-columns:1fr;gap:12px}header,main,footer{padding:22px}.panel{padding:22px}header{flex-wrap:wrap}.intro{font-size:18px}}
+  </style>
+  <script type="module" src="assets/import.js"></script>
+</head>
+<body>
+  <header><a href="./">Research homepage</a><a href="edit.html">Edit website</a></header>
+  <main>
+    <p class="eyebrow">From LaTeX to lecture notes</p>
+    <h1>Your equations, ready to read online.</h1>
+    <p class="intro">Upload your LaTeX project as a ZIP. The website converts its text and supported formulas into a web note that visitors can read directly in their browser.</p>
+    <ol class="steps">
+      <li><strong>Choose a topic</strong><p>Select the lecture-note topic below.</p></li>
+      <li><strong>Upload on GitHub</strong><p>Sign in as <b>Hestious</b>, upload your ZIP, and choose <b>Commit changes</b>.</p></li>
+      <li><strong>Read the web note</strong><p>Conversion and publication run automatically. Check the build status, then open the topic on your homepage.</p></li>
+    </ol>
+    <section class="panel" aria-labelledby="upload-title">
+      <h2 id="upload-title">Import a lecture note</h2>
+      <label class="label" for="topic">Lecture-note topic</label>
+      <select id="topic" disabled><option>Loading topics…</option></select>
+      <p id="topic-description" class="hint"></p>
+      <div id="load-error" role="alert" hidden><p class="error">The topics could not be loaded. Please try again.</p><button id="retry" class="retry" type="button">Try again</button></div>
+      <div class="links">
+        <a id="upload-link" class="button" aria-disabled="true" tabindex="-1" target="_blank" rel="noopener noreferrer">Upload ZIP on GitHub</a>
+        <a id="folder-link" hidden target="_blank" rel="noopener noreferrer">View topic folder</a>
+        <a href="https://github.com/Hestious/Hestious.github.io/actions" target="_blank" rel="noopener noreferrer">Check build status</a>
+      </div>
+      <p class="hint">Keep one ZIP in each topic folder. To update a note, upload the replacement using the same ZIP filename.</p>
+      <div id="current-note" class="status" role="status" aria-live="polite"></div>
+    </section>
+    <section aria-labelledby="example-title">
+      <h2 id="example-title">See an example</h2>
+      <p>A small demonstration shows how LaTeX text and equations become a web note. It is sample content, not a research manuscript.</p>
+      <div class="links"><a href="examples/latex-import/index.html">Read the converted example</a><a href="examples/latex-import/sample.zip" download>Download the sample LaTeX ZIP</a><a href="import-report.json">View the latest conversion report</a></div>
+    </section>
+    <div class="help">
+      <section aria-labelledby="prepare-title"><h2 id="prepare-title">Prepare your ZIP</h2><ul><li>Download your project’s source ZIP from Overleaf, or zip the project folder.</li><li>Include the <code>.tex</code> files, bibliography, and figures used by the document.</li><li>A file named <code>main.tex</code> is preferred. A single document containing <code>\documentclass</code> can also be detected.</li><li>Keep included files and figures at their original relative paths.</li></ul></section>
+      <section aria-labelledby="support-title"><h2 id="support-title">What to expect</h2><p>The web version supports ordinary text, headings, lists, and mathematical formulas. It is a reading version, so its layout may differ from your compiled PDF.</p><p>Special packages, complex custom commands, and diagrams such as TikZ may need adjustment. Keep a PDF alongside the web note when exact typesetting matters.</p><p>If conversion fails, the previous published website stays available. Open the build status for the error details.</p></section>
+    </div>
+    <p><a href="https://github.com/Hestious/Hestious.github.io/blob/main/sources/README.md" target="_blank" rel="noopener noreferrer">Read the LaTeX import guide</a></p>
+    <noscript><p>This topic picker needs JavaScript. You can also open the <a href="https://github.com/Hestious/Hestious.github.io/tree/main/sources">source folders on GitHub</a>, choose a topic, and upload its ZIP there.</p></noscript>
+  </main>
+  <footer>ZIP files uploaded to this public GitHub repository are public, including their source text and history. Upload only material you want to share.</footer>
+</body>
+</html>

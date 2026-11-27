@@ -108,6 +108,7 @@ export function renderNoteText(text) {
   return fragment;
 }
 function manuscriptEmpty(note) {
+  if (safeUrl(note.webUrl)) return append(element('div','rh-manuscript-empty'),icon(),element('h3','','Read this note online'),element('p','','Open the reading page above for selectable text, rendered formulas, figures, and references.'));
   const hasResources=!!(safeUrl(note.pdfUrl)||safeUrl(note.externalUrl));
   return append(element('div','rh-manuscript-empty'),icon(),element('h3','',hasResources?'Explore the attached material':'Notes in preparation'),element('p','',hasResources?'Use the links above to read the material for this topic.':'This topic is part of my notes collection. A manuscript has not been posted yet.'));
 }
@@ -120,11 +121,15 @@ async function syncNote() {
   if(!dialog.open){previousFocus=document.activeElement;dialog.showModal();}
   $('reader-category').textContent=note.category;$('note-title').textContent=note.title;$('reader-description').textContent=note.description;
   const meta=$('reader-meta');meta.replaceChildren(badge(note));if(note.updatedAt){const date=new Date(note.updatedAt);if(!Number.isNaN(date.getTime()))meta.append(element('span','',`Updated ${date.toLocaleDateString('en',{year:'numeric',month:'long',day:'numeric',timeZone:'UTC'})}`));}
-  const links=$('reader-links');links.replaceChildren();append(links,resourceLink('Read PDF',note.pdfUrl,'rh-button'),resourceLink('Open resource',note.externalUrl,'rh-button rh-button-light'));links.hidden=!links.childElementCount;
+  const links=$('reader-links');links.replaceChildren();
+  const webLink=resourceLink('Read online',note.webUrl,'rh-button');if(webLink){webLink.removeAttribute('target');webLink.removeAttribute('rel');}
+  append(links,webLink,resourceLink('Read PDF',note.pdfUrl,webLink?'rh-button rh-button-light':'rh-button'),resourceLink('Open resource',note.externalUrl,'rh-button rh-button-light'));links.hidden=!links.childElementCount;
   const body=$('reader-body');body.className='';body.replaceChildren(element('p','rh-reader-status','Loading note…'));
-  $('edit-note').href=validBodyFile(note.bodyFile)?githubBase+note.bodyFile:githubBase+'content/notes.json';
+  $('edit-note').href=safeUrl(note.webUrl)?`./import.html?topic=${encodeURIComponent(note.id)}`:(validBodyFile(note.bodyFile)?githubBase+note.bodyFile:githubBase+'content/notes.json');
+  $('edit-note').textContent=safeUrl(note.webUrl)?'Replace LaTeX ZIP':'Edit this note on GitHub';
   try{
     let text=typeof note.body==='string'?note.body:'';
+    if(safeUrl(note.webUrl)){body.replaceChildren(manuscriptEmpty(note));return;}
     if(validBodyFile(note.bodyFile)){readController=new AbortController();const response=await fetch(`./${note.bodyFile}`,{signal:readController.signal,cache:'no-cache'});if(!response.ok)throw Error('Note unavailable');text=await response.text();}
     if(sequence!==noteSequence)return;
     // An optional leading HTML comment provides editing instructions, not manuscript text.

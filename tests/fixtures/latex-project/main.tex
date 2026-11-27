@@ -1,0 +1,38 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,amsthm}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\inner}[2]{\langle #1,#2\rangle}
+\newtheorem{theorem}{Theorem}
+\title{LaTeX import example}
+\begin{document}
+\maketitle
+This is a demonstration document for the LaTeX importer, not a research manuscript.
+It illustrates selectable text, mathematical notation, theorem statements,
+references, and an included chapter.
+
+\section{States and expectation values}\label{sec:states}
+A density operator on $\C^2$ satisfies $\rho\succeq0$ and $\Tr\rho=1$.
+The Hilbert--Schmidt inner product is $\inner{A}{B}=\Tr(A^\dagger B)$.
+Consider the maximally mixed state and the Pauli matrix:
+\begin{equation}\label{eq:matrices}
+\rho=\frac12\begin{pmatrix}1&0\\0&1\end{pmatrix},
+\qquad \sigma_z=\begin{pmatrix}1&0\\0&-1\end{pmatrix}.
+\end{equation}
+\begin{theorem}[Vanishing expectation]\label{thm:expectation}
+For the state in Eq.~\eqref{eq:matrices}, the expectation value of $\sigma_z$ is zero.
+\end{theorem}
+\begin{proof}
+Using linearity of the trace,
+\begin{align}\label{eq:expectation}
+\Tr(\rho\sigma_z)&=\frac12\Tr(\sigma_z)\\
+&=\frac12(1-1)=0.\nonumber
+\end{align}
+This proves the claim.
+\end{proof}
+Theorem~\ref{thm:expectation} and Eq.~\eqref{eq:expectation} demonstrate cross-references.
+Standard background is given in Ref.~\cite{nielsen2000}.
+\input{chapters/transport}
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

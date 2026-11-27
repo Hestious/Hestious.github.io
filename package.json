@@ -1,0 +1,13 @@
+{
+  "name": "hestious-research-homepage",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Research homepage and automatic LaTeX lecture-note imports",
+  "scripts": {
+    "build": "python3 scripts/build_site.py --output dist",
+    "test": "python3 -m unittest discover -s tests -v"
+  },
+  "dependencies": {
+    "mathjax": "3.2.2"
+  }
+}

@@ -1,6 +1,7 @@
 """Integration checks for LaTeX conversion and archive boundaries."""
 import importlib.util
 import base64
+import hashlib
 from pathlib import Path
 import shutil
 import stat
@@ -50,6 +51,91 @@ class ImportTests(unittest.TestCase):
         self.assertIn("Quantum Computation and Quantum Information", page)
         self.assertNotIn("LATEXDISPLAYTOKEN", page)
         self.assertEqual(report["warnings"], [])
+
+    @unittest.skipUnless(shutil.which("pandoc"), "Pandoc is required")
+    def test_section_appendix_and_shared_theorem_counters(self):
+        source = r"""\documentclass{article}
+\usepackage{amsmath,amsthm}
+\numberwithin{equation}{section}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\begin{document}
+\section{Main}\label{sec:main}
+\begin{equation}a=b\label{eq:first}\end{equation}
+\begin{align}c&=d\\ e&=f\notag\\ g&=h\end{align}
+\begin{theorem}\label{thm:main}A result.\end{theorem}
+\begin{lemma}\label{lem:main}Another result.\end{lemma}
+See \ref{thm:appendix}, \ref{lem:main}, \eqref{eq:appendix}.
+\appendix
+\section{Proofs}\label{sec:appendix}
+\begin{equation}\begin{aligned}i&=j\\ k&=l\end{aligned}\label{eq:appendix}\end{equation}
+\begin{theorem}\label{thm:appendix}Appendix result.\end{theorem}
+\end{document}"""
+        page, report = self.convert(self.zip({"main.tex": source}))
+        for tag in ("1.1", "1.2", "1.3", "A.1"):
+            self.assertIn(r"\tag{" + tag + "}", page)
+        self.assertNotIn(r"\tag{1.4}", page)
+        self.assertNotIn(r"\tag{A.2}", page)
+        for title in ("Theorem 1.1", "Lemma 1.2", "Theorem A.1", "A. Proofs"):
+            self.assertIn(title, page)
+        self.assertRegex(page, r'href="#thm:appendix"[^>]*>A\.1</a>')
+        self.assertRegex(page, r'href="#lem:main"[^>]*>1\.2</a>')
+        self.assertIn(r"\eqref{eq:appendix}", page)
+        self.assertEqual(report["warnings"], [])
+
+    @unittest.skipUnless(shutil.which("pandoc"), "Pandoc is required")
+    def test_citation_recovered_only_from_same_zip_and_source_hash_reported(self):
+        archive = self.zip({
+            "main.tex": r"\documentclass{article}\begin{document}Read \cite{missing}.\nocite{*}\bibliography{declared}\end{document}",
+            "declared.bib": "@book{existing,title={Existing work},author={Doe, Jane},year={2020}}",
+            "extra.bib": "@book{missing,title={Recovered work},author={Roe, John},year={2021}}\n@book{unused,title={Unused work},year={2022}}",
+        })
+        page, report = self.convert(archive)
+        self.assertIn("Recovered Work", page)
+        self.assertIn("Existing Work", page)
+        self.assertNotIn("Unused Work", page)
+        self.assertEqual(report["sourceSha256"], hashlib.sha256(archive.read_bytes()).hexdigest())
+        self.assertEqual(len(report["warnings"]), 1)
+        self.assertIn("Recovered cited reference missing from extra.bib", report["warnings"][0])
+        self.assertNotIn('class="unconverted-latex"', page)
+
+    @unittest.skipUnless(all(shutil.which(tool) for tool in ("pandoc", "pdflatex", "pdftoppm")), "Pandoc, TeX, and Poppler are required")
+    def test_tikz_and_commented_commutative_diagram_render_as_images(self):
+        source = r"""\documentclass{article}
+\usepackage{tikz,tikz-cd}
+\newcommand{\field}{\mathbb{C}}
+\tikzset{point/.style={circle,draw}}
+\begin{document}
+\begin{figure}\centering\scalebox{0.5}{\begin{tikzpicture}\node[point] {$\field$};\end{tikzpicture}}\caption{A point.}\end{figure}
+\[
+\begin{tikzcd}
+% This comment must not introduce a paragraph inside a matrix cell.
+\field \arrow[r] & \field
+\end{tikzcd}
+\]
+\end{document}"""
+        page, report = self.convert(self.zip({"main.tex": source}))
+        self.assertEqual(report["diagramCount"], 2)
+        for index in (1, 2):
+            name = f"media/diagram-{index:03d}.png"
+            self.assertIn(f'src="{name}"', page)
+            self.assertTrue((self.root / "article" / name).read_bytes().startswith(b"\x89PNG"))
+        self.assertNotIn(r"\begin{tikz", page)
+        self.assertNotIn("WEBLATEXDIAGRAM", page)
+        self.assertIn("A point.", page)
+        self.assertEqual(report["warnings"], [])
+
+    @unittest.skipUnless(shutil.which("pdflatex"), "TeX is required")
+    def test_diagram_compiler_cannot_read_or_write_parent_files(self):
+        (self.root / "canary.tex").write_text("CANARY")
+        directory = self.root / "isolated"
+        directory.mkdir()
+        for payload in (r"\csname input\endcsname ../canary.tex", r"\newwrite\out\immediate\csname openout\endcsname\out=../created.txt\relax\immediate\write\out{blocked}"):
+            with self.subTest(payload=payload):
+                (directory / "diagram.tex").write_text(r"\documentclass{article}\begin{document}" + payload + r"\end{document}")
+                with self.assertRaises(site.ImportFailure):
+                    site.restricted_command([shutil.which("pdflatex"), "-no-shell-escape", "-interaction=nonstopmode", "-halt-on-error", "diagram.tex"], directory)
+                self.assertFalse((self.root / "created.txt").exists())
 
     def test_traversal_is_rejected(self):
         with self.assertRaisesRegex(site.ImportFailure, "Unsafe ZIP path"):

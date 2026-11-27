@@ -1,10 +1,11 @@
 /* Shared by imported lecture notes. MathJax itself is bundled during the build. */
 window.MathJax = {
-  loader: { load: ['[tex]/physics', '[tex]/mathtools', 'ui/safe'] },
+  loader: { load: ['[tex]/physics', '[tex]/mathtools', '[tex]/unicode', 'ui/safe'] },
   tex: {
     inlineMath: [['\\(', '\\)'], ['$', '$']],
     displayMath: [['\\[', '\\]'], ['$$', '$$']],
-    packages: { '[+]': ['physics', 'mathtools'] },
+    packages: { '[+]': ['physics', 'mathtools', 'unicode'], '[-]': ['noundefined'] },
+    macros: { mathds: ['\\mathbb{#1}', 1] },
     tags: 'ams',
     processEscapes: true,
     maxBuffer: 65536,
@@ -18,6 +19,15 @@ window.MathJax = {
     }
   },
   startup: {
+    ready() {
+      MathJax.startup.defaultReady();
+      MathJax.startup.input[0].preFilters.add(({math}) => {
+        // MathJax's TeX font has double-struck letters but no double-struck
+        // digits. Keep dsfont identity operators as their actual Unicode glyphs.
+        math.math = math.math.replace(/\\mathds\s*(?:\{\s*([0-9]+)\s*\}|([0-9]))/g, (_, braced, digit) =>
+          '{' + [...(braced || digit)].map(value => '\\unicode{x' + (0x1D7D8 + Number(value)).toString(16) + '}').join('') + '}');
+      });
+    },
     pageReady() {
       return MathJax.startup.defaultPageReady().then(() => {
         const status = document.getElementById('math-status');

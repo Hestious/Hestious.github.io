@@ -5,7 +5,7 @@
   "description": "Research homepage and automatic LaTeX lecture-note imports",
   "scripts": {
     "build": "python3 scripts/build_site.py --output dist",
-    "test": "python3 -m unittest discover -s tests -v"
+    "test": "python3 -m unittest discover -s tests -v && node --test tests/*.test.mjs"
   },
   "dependencies": {
     "mathjax": "3.2.2"

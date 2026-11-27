@@ -8,6 +8,8 @@
   <title>Research & Notes</title>
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./assets/style.css">
+  <style>[data-owner-only][hidden],[data-owner-guest][hidden]{display:none!important}</style>
+  <script defer src="./assets/owner-ui.js"></script>
   <script type="module" src="./assets/site.js"></script>
 </head>
 <body>
@@ -39,8 +41,8 @@
       <p class="rh-notes-footnote">These are personal study notes. Topics marked “In preparation” do not yet have a posted manuscript.</p>
     </section>
   </main>
-  <footer class="rh-footer"><div><span class="rh-footer-name" id="footer-name">Research & notes</span><span>Research, ideas, and notes in progress.</span></div><a href="./edit.html">Edit website</a></footer>
-  <dialog id="note-reader" class="rh-dialog" aria-labelledby="note-title"><div class="rh-reader"><div class="rh-reader-top"><span class="rh-eyebrow">Lecture notes</span><button id="close-note" class="rh-icon-button" type="button" aria-label="Close lecture note">✕</button></div><p id="reader-category" class="rh-note-category"></p><h2 id="note-title"></h2><p id="reader-description" class="rh-reader-description"></p><div id="reader-meta" class="rh-reader-meta"></div><div id="reader-links" class="rh-reader-links"></div><div id="reader-body" aria-live="polite"></div><p class="rh-reader-edit"><a id="edit-note" href="./edit.html" target="_blank" rel="noopener noreferrer">Edit this note on GitHub</a></p></div></dialog>
+  <footer class="rh-footer"><div><span class="rh-footer-name" id="footer-name">Research & notes</span><span>Research, ideas, and notes in progress.</span></div><a href="./edit.html" data-owner-only hidden>Edit website</a></footer>
+  <dialog id="note-reader" class="rh-dialog" aria-labelledby="note-title"><div class="rh-reader"><div class="rh-reader-top"><span class="rh-eyebrow">Lecture notes</span><button id="close-note" class="rh-icon-button" type="button" aria-label="Close lecture note">✕</button></div><p id="reader-category" class="rh-note-category"></p><h2 id="note-title"></h2><p id="reader-description" class="rh-reader-description"></p><div id="reader-meta" class="rh-reader-meta"></div><div id="reader-links" class="rh-reader-links"></div><div id="reader-body" aria-live="polite"></div><p class="rh-reader-edit" data-owner-only hidden><a id="edit-note" href="./edit.html" target="_blank" rel="noopener noreferrer">Edit this note on GitHub</a></p></div></dialog>
   <div id="note-unavailable" class="rh-note-unavailable" role="status" hidden><span>This note is unavailable.</span><button id="dismiss-note" type="button">Dismiss</button></div>
 </div>
 </body>

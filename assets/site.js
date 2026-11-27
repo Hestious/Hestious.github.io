@@ -3,6 +3,8 @@ const data = { profile: {}, interests: [], publications: [], notes: [] };
 let category = 'All topics';
 let search = '';
 let contentLoaded = false;
+let contentLoading = false;
+let lastContentCheck = 0;
 let readController;
 let previousFocus;
 let noteSequence = 0;
@@ -84,11 +86,12 @@ function renderNotes() {
   const list=$('note-list');list.replaceChildren();$('clear-search').hidden=!search;
   $('note-count').textContent=`${data.notes.length} topics`;
   notes.forEach(note=>{
-    const link=element('a','rh-note-row');link.href=`?note=${encodeURIComponent(note.id)}#notes`;
+    const webUrl=safeUrl(note.webUrl);
+    const link=element('a','rh-note-row');link.href=webUrl||`?note=${encodeURIComponent(note.id)}#notes`;link.dataset.noteId=note.id;
     const text=append(element('div','rh-note-info'),element('div','rh-note-category',note.category),element('h3','',note.title),element('p','',note.description));
-    const mark=badge(note);if(note.status==='available')mark.textContent='Read notes';const plus=icon('plus');plus.classList.add('rh-note-open');
+    const mark=badge(note);if(note.status==='available')mark.textContent=webUrl?'Read online':'Read notes';const plus=icon('plus');plus.classList.add('rh-note-open');
     append(link,append(element('div','rh-note-symbol'),icon()),text,mark,plus);
-    link.addEventListener('click',event=>{if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||event.button!==0)return;event.preventDefault();previousFocus=link;const url=new URL(window.location.href);url.searchParams.set('note',note.id);history.pushState({researchNoteOpened:true},'',url);syncNote();});list.append(link);
+    if(!webUrl)link.addEventListener('click',event=>{if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||event.button!==0)return;event.preventDefault();previousFocus=link;const url=new URL(window.location.href);url.searchParams.set('note',note.id);history.pushState({researchNoteOpened:true},'',url);syncNote();});list.append(link);
   });
   if(!notes.length){const empty=append(element('div','rh-search-empty'),element('h3','','No matching notes'),element('p','','Try another keyword or explore all topics.'));const reset=element('button','rh-button rh-button-light','Show all topics');reset.type='button';reset.addEventListener('click',()=>{search='';category='All topics';$('note-search').value='';renderFilters();renderNotes();$('note-search').focus();});append(empty,reset);list.append(empty);}
 }
@@ -138,21 +141,42 @@ async function syncNote() {
   }catch(error){if(error.name==='AbortError'||sequence!==noteSequence)return;body.replaceChildren(element('p','rh-load-error','The note could not be loaded. Please close it and try again.'));}
 }
 function closeNote(){if(history.state?.researchNoteOpened)history.back();else{const url=new URL(window.location.href);url.searchParams.delete('note');history.replaceState(null,'',url);syncNote();}}
-async function loadContent(){
-  $('main-content').setAttribute('aria-busy','true');$('retry-content').disabled=true;$('load-error').hidden=true;
+async function loadContent({background=false}={}){
+  if(contentLoading)return;
+  if(background&&Date.now()-lastContentCheck<5000)return;
+  contentLoading=true;
+  if(!background){$('main-content').setAttribute('aria-busy','true');$('retry-content').disabled=true;$('load-error').hidden=true;}
   try{
     const [profile,interests,publications,notes]=await Promise.all(['profile','interests','publications','notes'].map(async name=>{const response=await fetch(`./content/${name}.json`,{cache:'no-cache'});if(!response.ok)throw Error('Content unavailable');return response.json();}));
     if(!profile||typeof profile!=='object'||Array.isArray(profile)||![interests,publications,notes].every(Array.isArray))throw Error('Invalid content');
-    Object.assign(data,{profile,interests,publications,notes:notes.filter(note=>note.status!=='draft')});renderProfile();renderInterests();renderPublications();renderFilters();renderNotes();contentLoaded=true;syncNote();
-  }catch{ $('load-error').hidden=false;$('note-count').textContent='Topics unavailable'; }
-  finally{$('main-content').setAttribute('aria-busy','false');$('retry-content').disabled=false;}
+    const next={profile,interests,publications,notes:notes.filter(note=>note.status!=='draft')};
+    const changed=Object.fromEntries(Object.keys(next).map(key=>[key,!contentLoaded||JSON.stringify(data[key])!==JSON.stringify(next[key])]));
+    const currentId=new URL(window.location.href).searchParams.get('note');
+    const previousNote=data.notes.find(note=>note.id===currentId);
+    const focusedNoteId=previousFocus?.dataset?.noteId;
+    Object.assign(data,next);
+    if(changed.profile)renderProfile();if(changed.interests)renderInterests();if(changed.publications)renderPublications();
+    if(changed.notes){
+      if(category!=='All topics'&&!data.notes.some(note=>note.category===category))category='All topics';
+      renderFilters();renderNotes();
+      if(focusedNoteId)previousFocus=Array.from($('note-list').querySelectorAll('.rh-note-row')).find(link=>link.dataset.noteId===focusedNoteId);
+    }
+    contentLoaded=true;
+    const currentNote=data.notes.find(note=>note.id===currentId);
+    if(!background||(currentId&&(!$('note-reader').open||JSON.stringify(previousNote)!==JSON.stringify(currentNote))))syncNote();
+  }catch{ if(!background||!contentLoaded){$('load-error').hidden=false;$('note-count').textContent='Topics unavailable';} }
+  finally{contentLoading=false;lastContentCheck=Date.now();if(!background){$('main-content').setAttribute('aria-busy','false');$('retry-content').disabled=false;}}
 }
-$('retry-content').addEventListener('click',loadContent);
+$('retry-content').addEventListener('click',()=>loadContent());
 $('note-search').addEventListener('input',event=>{search=event.target.value;renderNotes();});
 $('clear-search').addEventListener('click',()=>{search='';$('note-search').value='';renderNotes();$('note-search').focus();});
 $('close-note').addEventListener('click',closeNote);$('dismiss-note').addEventListener('click',closeNote);
 $('note-reader').addEventListener('cancel',event=>{event.preventDefault();closeNote();});
 $('note-reader').addEventListener('click',event=>{if(event.target===event.currentTarget){const rect=event.currentTarget.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeNote();}});
 window.addEventListener('popstate',syncNote);
+function refreshWhenVisible(){if(document.visibilityState==='visible')loadContent({background:contentLoaded});}
+document.addEventListener('visibilitychange',refreshWhenVisible);
+window.addEventListener('focus',refreshWhenVisible);
+window.addEventListener('pageshow',event=>{if(event.persisted)refreshWhenVisible();});
 if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting)document.querySelectorAll('.rh-header nav a').forEach(link=>link.classList.toggle('rh-nav-active',link.hash===`#${entry.target.id}`));},{rootMargin:'-15% 0px -65% 0px'});document.querySelectorAll('main section[id]').forEach(section=>observer.observe(section));}
 loadContent();

@@ -8,9 +8,9 @@ The initial topic files contain only an editing comment and have no manuscript c
 
 ## LaTeX notes with rendered formulas
 
-Use [Import LaTeX ZIP](https://hestious.github.io/import.html) to choose a topic and upload its LaTeX project ZIP. The build creates a web article with supported text and formulas under `notes/imported/<topic-id>/index.html` and adds the reading link automatically.
+Use your bookmarked [owner upload page](https://hestious.github.io/import.html) to connect GitHub, choose a topic, select its LaTeX project ZIP, and publish directly from the website. See the [owner connection steps](../README.md#connect-the-owner-page) for the initial setup. The build creates a web article with supported text and formulas under `notes/imported/<topic-id>/index.html` and adds the reading link automatically.
 
-Generated articles are build output. Update the ZIP in `sources/<topic-id>/` to change an imported article; editing the Markdown file here does not change that article. Remove the ZIP and commit if you want the topic to use only its Markdown manuscript again.
+Generated articles are build output. Publish a replacement ZIP from the owner page to change an imported article; editing the Markdown file here does not change that article. Remove the ZIP and commit if you want the topic to use only its Markdown manuscript again.
 
 For the complete workflow, see the [LaTeX import guide](../sources/README.md).
 

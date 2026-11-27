@@ -25,11 +25,13 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Install document converter
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pandoc poppler-utils
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pandoc poppler-utils texlive-latex-base texlive-pictures
       - name: Install formula renderer
         run: npm ci --ignore-scripts
       - name: Check LaTeX import behavior
         run: python3 -m unittest discover -s tests -v
+      - name: Check direct publishing and formula rendering
+        run: node --test tests/*.test.mjs
       - name: Convert lecture notes and build website
         run: python3 scripts/build_site.py --output dist
       - uses: actions/upload-artifact@v4

@@ -9,8 +9,8 @@ Edit the JSON files in this folder with GitHub's pencil button, then commit to `
 
 For a simple manuscript, edit `notes/<topic-id>.md`. PDF attachments go in `assets/pdfs/` and are linked by the topic's `pdfUrl`.
 
-For an existing LaTeX manuscript, use [Import LaTeX ZIP](https://hestious.github.io/import.html). Put one source ZIP in `sources/<topic-id>/`. The build converts it into a web article with rendered equations and automatically sets `webUrl` and availability in the **published** `content/notes.json`. These generated fields do not have to be added to the source JSON by hand.
+For an existing LaTeX manuscript, bookmark the [owner upload page](https://hestious.github.io/import.html). Connect GitHub, select the topic, choose a source ZIP, and publish directly from that page. It stores the active source in `sources/<topic-id>/`. See the [owner connection steps](../README.md#connect-the-owner-page) for the initial setup. The build converts it into a web article with rendered equations and automatically sets `webUrl` and availability in the **published** `content/notes.json`. These generated fields do not have to be added to the source JSON by hand.
 
-The imported web article comes from the ZIP. Editing a topic's Markdown file does not change that article. Replace the ZIP to update it, or remove the ZIP and commit to return to the Markdown-only version. An attached PDF can remain alongside either format.
+The imported web article comes from the ZIP. Editing a topic's Markdown file does not change that article. Publish a replacement ZIP from the owner page to update it, or remove the ZIP and commit to return to the Markdown-only version. An attached PDF can remain alongside either format.
 
 [LaTeX import guide](../sources/README.md) · [Editing guide](../README.md)

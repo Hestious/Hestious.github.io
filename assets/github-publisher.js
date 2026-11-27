@@ -35,7 +35,8 @@ export class GitHubPublisher {
   #connected = false;
   #fetch;
   #publishing = false;
-  constructor(fetcher = fetch) { this.#fetch = fetcher; }
+  // Browser fetch is a Window method: never invoke it with this publisher as its receiver.
+  constructor(fetcher = (...args) => globalThis.fetch(...args)) { this.#fetch = fetcher; }
   get connected() { return this.#connected; }
   disconnect() { this.#token = ''; this.#connected = false; }
 
@@ -51,7 +52,17 @@ export class GitHubPublisher {
         headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${this.#token}`, 'X-GitHub-Api-Version': '2022-11-28', ...(body ? { 'Content-Type': 'application/json' } : {}) },
         ...(body ? { body: JSON.stringify(body) } : {})
       });
-    } catch { throw new PublishError('The GitHub request was interrupted. Check the current note or build details before retrying; a save may already have completed.', 'network'); }
+    } catch (error) {
+      const timedOut = controller.signal.aborted || error?.name === 'AbortError' || error?.name === 'TimeoutError';
+      if (!this.#connected) {
+        throw new PublishError(timedOut
+          ? 'Connecting to GitHub timed out. No file was uploaded. Please try again.'
+          : 'Could not connect to GitHub. No file was uploaded. Reload this page and try again.', timedOut ? 'timeout' : 'network');
+      }
+      throw new PublishError(timedOut
+        ? 'The GitHub request timed out. Check the current note or build details before retrying; a save may already have completed.'
+        : 'The GitHub request was interrupted. Check the current note or build details before retrying; a save may already have completed.', timedOut ? 'timeout' : 'network');
+    }
     finally { clearTimeout(timeout); }
     if (!response.ok) {
       if (response.status === 401) { this.disconnect(); throw new PublishError('This publishing token is invalid or expired. Connect again with a valid token.', 'unauthorized'); }

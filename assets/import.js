@@ -1,4 +1,4 @@
-import { GitHubPublisher, MAX_ZIP_BYTES, REPO_URL, publicationRun, validateZip } from './github-publisher.js';
+import { GitHubPublisher, MAX_ZIP_BYTES, REPO_URL, publicationRun, validateZip } from './github-publisher.js?v=20261127-connection-2';
 
 const $ = id => document.getElementById(id);
 const publisher = new GitHubPublisher();

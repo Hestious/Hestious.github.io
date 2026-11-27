@@ -105,3 +105,34 @@ test('publisher implementation never persists or logs the credential', () => {
   assert.ok(!/localStorage|sessionStorage|console\./.test(source));
   assert.ok(source.includes('#token')); assert.ok(source.includes('this.#token = \'\''));
 });
+
+
+test('default browser fetch keeps its required global receiver', async () => {
+  const original = globalThis.fetch;
+  let count = 0;
+  globalThis.fetch = function (url, options) {
+    assert.equal(this, globalThis, 'Window.fetch must not receive the publisher instance as this');
+    assert.equal(options.headers['X-GitHub-Api-Version'], '2022-11-28');
+    const data = ++count === 1 ? { login: 'Hestious' } : repo;
+    return Promise.resolve({ ok: true, status: 200, json: async () => data });
+  };
+  try {
+    const publisher = new GitHubPublisher();
+    await publisher.connect(TOKEN);
+    assert.equal(publisher.connected, true);
+    assert.equal(count, 2);
+    publisher.disconnect();
+  } finally { globalThis.fetch = original; }
+});
+
+test('connection failure explains that no upload occurred', async () => {
+  const publisher = new GitHubPublisher(async () => { throw new TypeError('Failed to fetch'); });
+  await assert.rejects(publisher.connect(TOKEN), error => error.code === 'network' && /No file was uploaded/.test(error.message));
+  assert.equal(publisher.connected, false);
+});
+
+test('connection timeout is distinct from a network error', async () => {
+  const publisher = new GitHubPublisher(async () => { throw new DOMException('The operation was aborted.', 'AbortError'); });
+  await assert.rejects(publisher.connect(TOKEN), error => error.code === 'timeout' && /timed out/.test(error.message) && /No file was uploaded/.test(error.message));
+  assert.equal(publisher.connected, false);
+});

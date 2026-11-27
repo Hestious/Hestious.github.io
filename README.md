@@ -87,6 +87,10 @@ Create a fine-grained personal access token once in GitHub:
 
 The page keeps the token only in memory while it is open. Reloading or disconnecting clears it. Reuse the still-valid token to reconnect, or create a replacement in GitHub if it has expired. The owner interface can remember that its controls should be shown in the current tab, but that interface preference does not grant upload access: GitHub checks the token's repository permissions on every write.
 
+If connection succeeds but publishing is rejected, open [fine-grained token settings](https://github.com/settings/personal-access-tokens) and inspect the token used on the owner page. Its resource owner must be **Hestious**, its repository access must include **Hestious.github.io**, and **Contents** must be **Read and write**. Save any corrections, then disconnect and reconnect on the owner page. Connecting checks account identity and repository access; it cannot prove the token has permission to write. A token can read a public repository even when it cannot update it.
+
+Publishing errors identify the failed operation, HTTP status, and GitHub's reason when available. A rate-limit error requires waiting; a repository-rule error needs review of the named rule; a stale-branch error requires refreshing before retrying. Do not share the token when reporting an error.
+
 The upload page and its source code are publicly readable, just like the repository. Hiding editing controls improves the visitor view; it does not make those pages or source files private.
 
 Try the [converted example](https://hestious.github.io/examples/latex-import/index.html) or download its [sample ZIP](https://hestious.github.io/examples/latex-import/sample.zip). This is demonstration content, not a user manuscript.

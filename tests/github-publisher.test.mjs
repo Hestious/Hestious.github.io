@@ -15,7 +15,7 @@ function mocked(responses) {
     calls.push({ url, ...options, body: options.body ? JSON.parse(options.body) : undefined });
     const next = responses.shift();
     assert.ok(next, `Unexpected API call ${url}`);
-    return { ok: next.status === undefined || next.status < 400, status: next.status || 200, json: async () => next.data };
+    return { ok: next.status === undefined || next.status < 400, status: next.status || 200, headers: new Headers(next.headers || {}), json: async () => { if (next.parseError) throw new SyntaxError('Invalid JSON'); return next.data; } };
   } };
 }
 function happyResponses() {
@@ -173,10 +173,10 @@ function database({ notes = [originalNote], publications = [], profile = origina
     else if (path === `/git/commits/${B}`) data = { tree: { sha: C } };
     else if (path === `/git/trees/${C}`) data = { truncated: false, tree };
     else if (path.startsWith('/git/blobs/') && options.method === 'GET') data = blobs.get(path.split('/').at(-1));
-    else if (path === '/git/blobs' && options.method === 'POST') { data = { sha: A }; status = blobStatus; }
+    else if (path === '/git/blobs' && options.method === 'POST') { data = blobStatus < 400 ? { sha: A } : { message: 'Resource not accessible by personal access token' }; status = blobStatus; }
     else if (path === '/git/trees' && options.method === 'POST') data = { sha: D };
     else if (path === '/git/commits' && options.method === 'POST') data = { sha: E };
-    else if (path === '/git/refs/heads/main' && options.method === 'PATCH') { data = { object: { sha: E } }; status = patchStatus; }
+    else if (path === '/git/refs/heads/main' && options.method === 'PATCH') { data = patchStatus < 400 ? { object: { sha: E } } : { message: 'Update is not a fast forward' }; status = patchStatus; }
     assert.ok(data, `Unexpected API route: ${options.method} ${path}`);
     return { ok: status < 400, status, json: async () => data };
   };
@@ -359,4 +359,94 @@ test('photo failure or concurrent PDF/photo update never forces or reports succe
     assert.equal(mock.calls.filter(call => call.method === 'PATCH').length, 1);
     assert.equal(mock.calls.at(-1).body.force, false);
   }
+});
+
+test('a connected account can still receive a token permission denial at the photo upload stage', async () => {
+  const mock = await connectedDatabase({ blobStatus: 403 });
+  assert.equal(mock.publisher.connected, true);
+  await assert.rejects(mock.publisher.updateProfilePhoto({ bytes: PNG, filename: 'photo.png' }), error => {
+    assert.equal(error.code, 'forbidden');
+    assert.match(error.message, /uploading the file \(HTTP 403\)/);
+    assert.match(error.message, /Request: POST \/git\/blobs/);
+    assert.match(error.message, /Resource not accessible by personal access token/);
+    assert.match(error.message, /Hestious\.github\.io/);
+    assert.match(error.message, /Contents: Read and write/);
+    assert.match(error.message, /Connecting successfully does not confirm/);
+    assert.match(error.message, /If those settings are already correct/);
+    return true;
+  });
+  assert.equal(writes(mock).length, 1);
+  assert.ok(!mock.calls.some(call => call.method === 'PATCH' || (call.method === 'POST' && !call.url.endsWith('/git/blobs'))));
+});
+
+test('request errors identify the exact read or write stage and HTTP status', async () => {
+  for (const [index, stage] of [[3, 'reading the main branch'], [4, 'reading the current commit'], [5, 'reading the homepage file tree'], [6, 'saving the file tree'], [7, 'saving the commit'], [8, 'updating the main branch']]) {
+    const responses = happyResponses(); responses[index] = { status: 500, data: { message: 'Temporary server failure' } };
+    const mock = mocked(responses); const publisher = new GitHubPublisher(mock.fetcher); await publisher.connect(TOKEN);
+    await assert.rejects(publisher.publish({ topic: 'kd-distribution', bytes: ZIP, filename: 'x.zip' }), error => error.message.includes(`${stage} (HTTP 500)`) && error.message.includes('Temporary server failure') && !error.message.includes(B) && !error.message.includes(C));
+    assert.equal(mock.calls.length, index + 1);
+  }
+  const mock = database();
+  const publisher = new GitHubPublisher((url, options) => url.endsWith('/git/blobs/' + mock.sha('content/profile.json'))
+    ? Promise.resolve({ ok: false, status: 404, json: async () => ({ message: 'Not Found' }) }) : mock.fetcher(url, options));
+  await publisher.connect(TOKEN);
+  await assert.rejects(publisher.updateProfilePhoto({ bytes: PNG, filename: 'photo.png' }), error => /reading the profile \(HTTP 404\)/.test(error.message));
+  assert.equal(writes(mock).length, 0);
+});
+
+test('rate limits are distinguished from token permissions and include safe retry guidance', async () => {
+  for (const response of [
+    { status: 403, headers: { 'x-ratelimit-remaining': '0', 'retry-after': '120' }, data: { message: 'API rate limit exceeded' } },
+    { status: 403, data: { message: 'You have exceeded a secondary rate limit.' } },
+    { status: 429, headers: { 'retry-after': 'not-a-time ' + TOKEN }, data: { message: 'Too many requests' } }
+  ]) {
+    const mock = mocked([{ data: { login: 'Hestious' } }, { data: repo }, response]);
+    const publisher = new GitHubPublisher(mock.fetcher); await publisher.connect(TOKEN);
+    await assert.rejects(publisher.publish({ topic: 'kd-distribution', bytes: ZIP, filename: 'x.zip' }), error => {
+      assert.equal(error.code, 'rate-limited');
+      assert.match(error.message, /Wait at least/);
+      assert.ok(!error.message.includes('token settings')); assert.ok(!error.message.includes(TOKEN));
+      if (response.headers?.['retry-after'] === '120') assert.match(error.message, /120 seconds/);
+      return true;
+    });
+    assert.equal(mock.calls.length, 3);
+  }
+});
+
+test('branch restrictions and generic validation failures are not mislabeled as concurrent updates', async () => {
+  for (const [data, code] of [
+    [{ message: 'Repository rule violations found', errors: [{ message: 'Changes must be made through a pull request.' }] }, 'branch-rules'],
+    [{ message: 'GH006: Protected branch update failed for refs/heads/main.' }, 'branch-rules'],
+    [{ message: 'Validation Failed', errors: [{ message: 'Invalid reference name.' }] }, 'request-failed']
+  ]) {
+    const responses = happyResponses(); responses[8] = { status: 422, data };
+    const mock = mocked(responses); const publisher = new GitHubPublisher(mock.fetcher); await publisher.connect(TOKEN);
+    await assert.rejects(publisher.publish({ topic: 'kd-distribution', bytes: ZIP, filename: 'x.zip' }), error => error.code === code && /updating the main branch \(HTTP 422\)/.test(error.message) && !/repository changed/.test(error.message));
+    assert.equal(mock.calls.filter(call => call.method === 'PATCH').length, 1);
+    assert.equal(mock.calls.at(-1).body.force, false);
+  }
+});
+
+test('error messages redact credentials before truncation and disconnect after an unauthorized response', async () => {
+  const otherToken = 'ghp_another_secret_value';
+  const body = { message: `Bad credentials\u0000\n${TOKEN} ${otherToken} <unsafe>`, errors: [{ message: `Bearer ${TOKEN} ` + 'x'.repeat(1000) }], documentation_url: `https://example.org/?secret=${TOKEN}` };
+  const mock = mocked([{ status: 401, data: body, headers: { 'x-request-id': TOKEN } }]);
+  const publisher = new GitHubPublisher(mock.fetcher);
+  await assert.rejects(publisher.connect(TOKEN), error => {
+    assert.equal(error.code, 'unauthorized');
+    assert.match(error.message, /authenticating the GitHub account \(HTTP 401\)/);
+    assert.match(error.message, /\[redacted\]/);
+    assert.ok(!error.message.includes(TOKEN)); assert.ok(!error.message.includes(otherToken));
+    assert.ok(!/[\u0000-\u001f<>]/.test(error.message)); assert.ok(error.message.length < 600);
+    assert.ok(!error.message.includes('documentation_url'));
+    return true;
+  });
+  assert.equal(publisher.connected, false);
+});
+
+test('malformed GitHub error bodies retain status and guidance without exposing raw content', async () => {
+  const mock = mocked([{ data: { login: 'Hestious' } }, { data: repo }, { status: 403, parseError: true }]);
+  const publisher = new GitHubPublisher(mock.fetcher); await publisher.connect(TOKEN);
+  await assert.rejects(publisher.publish({ topic: 'kd-distribution', bytes: ZIP, filename: 'x.zip' }), error => error.code === 'forbidden' && /HTTP 403/.test(error.message) && /Contents: Read and write/.test(error.message));
+  assert.equal(mock.calls.length, 3);
 });

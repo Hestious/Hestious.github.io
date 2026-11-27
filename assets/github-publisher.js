@@ -58,6 +58,48 @@ function jsonUpdate(path, value) {
   return { path, mode: '100644', type: 'blob', content: JSON.stringify(value, null, 2) + '\n' };
 }
 
+function requestStage(path, method) {
+  if (path === '/user') return 'authenticating the GitHub account';
+  if (path === PREFIX) return 'checking repository access';
+  if (method === 'POST' && path.endsWith('/git/blobs')) return 'uploading the file';
+  if (method === 'POST' && path.endsWith('/git/trees')) return 'saving the file tree';
+  if (method === 'POST' && path.endsWith('/git/commits')) return 'saving the commit';
+  if (method === 'PATCH' && path.endsWith('/git/refs/heads/main')) return 'updating the main branch';
+  if (path.includes('/git/blobs/')) return 'reading a homepage file';
+  if (path.includes('/git/trees/')) return 'reading the homepage file tree';
+  if (path.includes('/git/commits/')) return 'reading the current commit';
+  if (path.includes('/git/ref/')) return 'reading the main branch';
+  return 'accessing the homepage repository';
+}
+
+async function errorMessage(response, token) {
+  let data;
+  try {
+    data = await response.json();
+  } catch { return ''; }
+  const messages = [data?.message, ...(Array.isArray(data?.errors) ? data.errors.slice(0, 3).map(error => typeof error === 'string' ? error : error?.message) : [])];
+  let message = messages.filter(value => typeof value === 'string').join(' ');
+  // Redact before truncation, and before a 401 clears the in-memory credential.
+  if (token) message = message.split(token).join('[redacted]');
+  message = message.replace(/(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+/gi, '[redacted]')
+    .replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/gi, 'Bearer [redacted]')
+    .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f]/g, ' ')
+    .replace(/[<>]/g, '').replace(/\s+/g, ' ').trim();
+  return message.length > 320 ? message.slice(0, 317) + '…' : message;
+}
+
+function rateLimitWait(response) {
+  const retry = response.headers?.get?.('retry-after');
+  const reset = response.headers?.get?.('x-ratelimit-reset');
+  let seconds = null;
+  if (retry && /^\d+$/.test(retry)) seconds = Number(retry);
+  else if (retry && Number.isFinite(Date.parse(retry))) seconds = Math.ceil((Date.parse(retry) - Date.now()) / 1000);
+  else if (reset && /^\d+$/.test(reset)) seconds = Math.ceil(Number(reset) - Date.now() / 1000);
+  return seconds !== null && Number.isFinite(seconds) && seconds > 0 && seconds <= 86400
+    ? `Wait at least ${Math.ceil(seconds)} seconds, then retry once.`
+    : 'Wait at least one minute before retrying; if the limit persists, wait longer.';
+}
+
 function base64(bytes) {
   let binary = '';
   for (let start = 0; start < bytes.length; start += 0x8000) binary += String.fromCharCode(...bytes.subarray(start, start + 0x8000));
@@ -79,19 +121,21 @@ export class GitHubPublisher {
   get connected() { return this.#connected; }
   disconnect() { this.#token = ''; this.#connected = false; }
 
-  async #request(path, method = 'GET', body) {
+  async #request(path, method = 'GET', body, stage = requestStage(path, method)) {
     if (!this.#token) throw new PublishError('Connect your publishing account first.', 'not-connected');
     if (!path.startsWith('/') || path.startsWith('//') || /[\\\s]/.test(path)) throw new PublishError('Invalid API path.');
     let response;
+    const requestToken = this.#token;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 120000);
     try {
       response = await this.#fetch(API + path, {
         method, signal: controller.signal, credentials: 'omit', redirect: 'error', cache: 'no-store',
-        headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${this.#token}`, 'X-GitHub-Api-Version': '2022-11-28', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+        headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${requestToken}`, 'X-GitHub-Api-Version': '2022-11-28', ...(body ? { 'Content-Type': 'application/json' } : {}) },
         ...(body ? { body: JSON.stringify(body) } : {})
       });
     } catch (error) {
+      clearTimeout(timeout);
       const timedOut = controller.signal.aborted || error?.name === 'AbortError' || error?.name === 'TimeoutError';
       if (!this.#connected) {
         throw new PublishError(timedOut
@@ -102,14 +146,30 @@ export class GitHubPublisher {
         ? 'The GitHub request timed out. Check the current note or build details before retrying; a save may already have completed.'
         : 'The GitHub request was interrupted. Check the current note or build details before retrying; a save may already have completed.', timedOut ? 'timeout' : 'network');
     }
-    finally { clearTimeout(timeout); }
     if (!response.ok) {
-      if (response.status === 401) { this.disconnect(); throw new PublishError('This publishing token is invalid or expired. Connect again with a valid token.', 'unauthorized'); }
-      if (response.status === 403 || response.status === 404) throw new PublishError('GitHub did not allow this operation. Check that the token selects Hestious.github.io with Contents: Read and write, and has not expired or reached its request limit.', 'forbidden');
-      if ((response.status === 409 || response.status === 422) && path.endsWith('/git/refs/heads/main')) throw new PublishError('The repository changed while you were uploading. Nothing was overwritten. Click Publish again to retry from the latest version.', 'conflict');
-      if (response.status === 413) throw new PublishError('GitHub rejected the upload size. Use a smaller ZIP.', 'too-large');
-      throw new PublishError(`GitHub could not finish this operation (HTTP ${response.status}). Your upload has not been confirmed; check the current note before retrying.`, 'request-failed');
+      let detail;
+      try { detail = await errorMessage(response, requestToken); }
+      finally { clearTimeout(timeout); }
+      const endpoint = path === PREFIX ? '/repos/{owner}/{repo}' : path.replace(PREFIX, '').split('?')[0].replace(/[a-f0-9]{40}/g, '{sha}');
+      const prefix = `GitHub could not finish ${stage} (HTTP ${response.status}). Request: ${method} ${endpoint}.${detail ? ` GitHub: ${detail}` : ''} `;
+      const failure = (guidance, code) => new PublishError(prefix + guidance, code);
+      if (response.status === 401) { this.disconnect(); throw failure('This publishing token is invalid or expired. Connect again with a valid token.', 'unauthorized'); }
+      if (response.status === 429 || (response.status === 403 && (response.headers?.get?.('x-ratelimit-remaining') === '0' || response.headers?.get?.('retry-after') || /rate.?limit|abuse detection/i.test(detail)))) {
+        throw failure(`GitHub has temporarily limited requests. ${rateLimitWait(response)}`, 'rate-limited');
+      }
+      if ([403, 409, 422].includes(response.status) && /GH006|GH013|protected branch|branch protection|repository rule|rule violation|pull request|required status check|signed commits?|push.*restricted/i.test(detail)) {
+        throw failure('A repository or branch rule blocked this change. Review the main branch rules in GitHub; direct publishing must satisfy them. No forced update was attempted.', 'branch-rules');
+      }
+      if ((response.status === 409 || response.status === 422) && path.endsWith('/git/refs/heads/main') && /not a fast[ -]forward|non[ -]fast[ -]forward|reference.*changed|is at [a-f0-9]+ but expected/i.test(detail)) {
+        throw failure('The repository changed while this update was being prepared. Nothing was overwritten. Retry from the latest version.', 'conflict');
+      }
+      if (response.status === 403 || response.status === 404) {
+        throw failure('If the GitHub reason indicates token access, check resource owner Hestious, Only select repositories → Hestious.github.io, and Repository permissions → Contents: Read and write. Connecting successfully does not confirm that the token can write files. If those settings are already correct, keep them and share this stage, HTTP status, and GitHub reason for diagnosis; never share your token.', 'forbidden');
+      }
+      if (response.status === 413) throw failure('The file is too large for this request. Use a smaller file.', 'too-large');
+      throw failure('This change has not been confirmed. Check the current homepage before retrying.', 'request-failed');
     }
+    clearTimeout(timeout);
     return response.json();
   }
 
@@ -122,6 +182,7 @@ export class GitHubPublisher {
       const user = await this.#request('/user');
       if (String(user.login).toLowerCase() !== 'hestious') throw new PublishError('This homepage can be published only by the Hestious account.', 'wrong-account');
       const repo = await this.#request(PREFIX);
+      // Repository push permission describes the account, not this token's Contents write grant.
       if (repo.full_name?.toLowerCase() !== REPOSITORY.toLowerCase() || repo.permissions?.push !== true) throw new PublishError('This account does not have write access to the homepage repository.', 'no-write-access');
       this.#connected = true;
       return { login: user.login };
@@ -167,7 +228,7 @@ export class GitHubPublisher {
       throw new PublishError(`The homepage file ${path} is missing. No changes were published.`, 'invalid-content');
     }
     if (entry.size > MAX_TEXT_BYTES) throw new PublishError(`The homepage file ${path} is too large to edit here.`, 'invalid-content');
-    const blob = await this.#request(`${PREFIX}/git/blobs/${entry.sha}`);
+    const blob = await this.#request(`${PREFIX}/git/blobs/${entry.sha}`, 'GET', undefined, path === 'content/profile.json' ? 'reading the profile' : 'reading a homepage file');
     if (blob.encoding !== 'base64' || typeof blob.content !== 'string' || blob.content.length > Math.ceil(MAX_TEXT_BYTES * 1.4)) throw new PublishError(`The homepage file ${path} could not be read safely.`, 'invalid-content');
     let value;
     try {

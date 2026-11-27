@@ -1,4 +1,4 @@
-import { GitHubPublisher, MAX_ZIP_BYTES, REPOSITORY, REPO_URL, publicationRun, validateZip, validatePhoto } from './github-publisher.js?v=20261127-owner-assets-1';
+import { GitHubPublisher, MAX_ZIP_BYTES, REPOSITORY, REPO_URL, publicationRun, validateZip, validatePhoto } from './github-publisher.js?v=20261127-publishing-errors-1';
 
 const $ = id => document.getElementById(id);
 const publisher = new GitHubPublisher();

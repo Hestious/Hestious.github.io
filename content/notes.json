@@ -37,10 +37,10 @@
     "title": "von Neumann algebra",
     "category": "Mathematical structures",
     "description": "Operator algebras, states, representations, and modular theory.",
-    "pdfUrl": "",
+    "pdfUrl": "assets/pdfs/von-neumann-algebra.pdf",
     "externalUrl": "",
-    "status": "coming-soon",
-    "updatedAt": "",
+    "status": "available",
+    "updatedAt": "2026-11-27",
     "bodyFile": "notes/von-neumann-algebra.md"
   },
   {
